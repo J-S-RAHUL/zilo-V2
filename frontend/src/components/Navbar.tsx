@@ -16,7 +16,9 @@ import {
   Bell,
   LogOut,
   User,
-  X
+  X,
+  Zap,
+  Mail
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -275,7 +277,11 @@ export const Navbar: React.FC = () => {
                 <div className="zilo-dropdown-menu user-menu">
                   <div className="user-dropdown-header">
                     <strong className="user-title">{currentUser.name}</strong>
-                    <span className="user-mobile">📞 {currentUser.mobile}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', fontSize: '0.78rem', color: '#2563eb', fontWeight: 600 }}>
+                      <Mail size={12} />
+                      <span>{currentUser.email}</span>
+                    </div>
+                    <span className="user-mobile">📞 +91 {currentUser.mobile}</span>
                     <div style={{ marginTop: '4px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                       <span className="user-role-badge">{currentUser.role.toUpperCase()} MODE</span>
                       <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '2px 6px', borderRadius: '10px', background: currentUser.education === 'educated' ? '#eff6ff' : '#f1f5f9', color: currentUser.education === 'educated' ? '#1d4ed8' : '#475569' }}>
@@ -283,6 +289,18 @@ export const Navbar: React.FC = () => {
                       </span>
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    className="menu-link-btn"
+                    onClick={() => {
+                      setCurrentView('dashboard');
+                      setShowUserMenu(false);
+                    }}
+                    style={{ background: '#eff6ff', color: '#1d4ed8', fontWeight: 700 }}
+                  >
+                    <Zap size={16} color="#2563eb" /> ⚡ Presentation Switcher (Mails)
+                  </button>
 
                   <button
                     type="button"

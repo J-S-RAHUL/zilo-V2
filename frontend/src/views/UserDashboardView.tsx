@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { processImageFile } from '../utils/imageUtils';
+import { DEMO_PRESENTATION_USERS, DemoPresentationUser } from '../data/seedData';
 import {
   LayoutDashboard,
   User,
@@ -21,12 +22,24 @@ import {
   CheckCircle2,
   ExternalLink,
   Camera,
-  Upload
+  Upload,
+  Mail,
+  Copy,
+  Check,
+  Sparkles,
+  Shield,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  Zap,
+  Filter
 } from 'lucide-react';
 
 export const UserDashboardView: React.FC = () => {
   const {
     currentUser,
+    setCurrentUser,
     workers,
     jobs,
     callHistory,
@@ -58,10 +71,28 @@ export const UserDashboardView: React.FC = () => {
   // Sub-tabs for Worker
   const [workerTab, setWorkerTab] = useState<'profile' | 'saved-jobs' | 'call-history'>('profile');
 
+  // Presentation Deck filter & search state
+  const [userCategoryFilter, setUserCategoryFilter] = useState<'all' | 'employer' | 'tradesman' | 'extra_hands' | 'service' | 'admin'>('all');
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [isDeckExpanded, setIsDeckExpanded] = useState(true);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+
+  // Auto sync dashboard mode whenever currentUser changes
+  useEffect(() => {
+    if (currentUser?.role === 'worker') {
+      setDashboardRole('worker');
+    } else if (currentUser?.role === 'employer') {
+      setDashboardRole('employer');
+    }
+  }, [currentUser?.role, currentUser?.id]);
+
   // Matching user's worker profile or demo fallback
   const myWorkerProfile =
-    workers.find((w) => w.userId === currentUser?.id || w.fullName.toLowerCase().includes(currentUser?.name.toLowerCase() || '')) ||
-    workers[0];
+    workers.find((w) =>
+      w.userId === currentUser?.id ||
+      (currentUser?.email && w.email?.toLowerCase() === currentUser?.email.toLowerCase()) ||
+      w.fullName.toLowerCase().includes(currentUser?.name.toLowerCase() || '')
+    ) || workers[0];
 
   const handleWorkerPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,7 +113,10 @@ export const UserDashboardView: React.FC = () => {
 
   // Jobs posted by this employer
   const myJobs = jobs.filter(
-    (j) => j.userId === currentUser?.id || j.employerName.toLowerCase().includes(currentUser?.name.toLowerCase() || '')
+    (j) =>
+      j.userId === currentUser?.id ||
+      (currentUser?.email && j.email?.toLowerCase() === currentUser?.email.toLowerCase()) ||
+      j.employerName.toLowerCase().includes(currentUser?.name.toLowerCase() || '')
   );
 
   const activeJobs = myJobs.filter((j) => j.status === 'active');
@@ -90,6 +124,54 @@ export const UserDashboardView: React.FC = () => {
 
   // Saved jobs list
   const savedJobs = jobs.filter((j) => savedJobIds.includes(j.id));
+
+  // Copy text helper
+  const handleCopyText = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedEmail(text);
+    showToast(`📋 Copied "${text}" to clipboard!`);
+    setTimeout(() => setCopiedEmail((prev) => (prev === text ? null : prev)), 2500);
+  };
+
+  // Switch / swing to demo user
+  const handleSwingUser = (demoUser: DemoPresentationUser) => {
+    setCurrentUser({
+      id: demoUser.id,
+      name: demoUser.name,
+      mobile: demoUser.mobile,
+      email: demoUser.email,
+      role: demoUser.role,
+      education: demoUser.education,
+      educationDegree: demoUser.educationDegree,
+      avatar: demoUser.avatarPhoto,
+      createdAt: '2026-09-15T10:00:00Z'
+    });
+
+    if (demoUser.role === 'employer') {
+      setDashboardRole('employer');
+    } else if (demoUser.role === 'worker') {
+      setDashboardRole('worker');
+    }
+
+    showToast(`✨ Switched persona to ${demoUser.name} (${demoUser.email})!`);
+  };
+
+  // Filter presentation demo users
+  const filteredDemoUsers = DEMO_PRESENTATION_USERS.filter((u) => {
+    if (userCategoryFilter !== 'all' && u.category !== userCategoryFilter) {
+      return false;
+    }
+    if (userSearchTerm.trim()) {
+      const q = userSearchTerm.toLowerCase();
+      const matchName = u.name.toLowerCase().includes(q);
+      const matchEmail = u.email.toLowerCase().includes(q);
+      const matchMobile = u.mobile.includes(q);
+      const matchRole = u.roleTitle.toLowerCase().includes(q);
+      return matchName || matchEmail || matchMobile || matchRole;
+    }
+    return true;
+  });
 
   return (
     <div className="zilo-dashboard-page">
@@ -104,7 +186,10 @@ export const UserDashboardView: React.FC = () => {
               <div>
                 <h1 className="dash-title">ZILO Dashboard</h1>
                 <p className="dash-subtitle">
-                  Logged in as <strong>{currentUser?.name}</strong> • 📞 {currentUser?.mobile}
+                  Logged in as <strong>{currentUser?.name}</strong> • ✉️ <span className="dash-email-highlight">{currentUser?.email}</span> • 📞 +91 {currentUser?.mobile}
+                  <span className={`dash-role-badge-pill role-${currentUser?.role || 'employer'}`}>
+                    {(currentUser?.role || 'employer').toUpperCase()} MODE
+                  </span>
                 </p>
               </div>
             </div>
@@ -131,6 +216,298 @@ export const UserDashboardView: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Administrator Elevated Mode Banner (If Admin is logged in) */}
+        {currentUser?.role === 'admin' && (
+          <div className="dash-admin-elevated-banner">
+            <div className="admin-banner-left">
+              <div className="admin-shield-icon">
+                <Shield size={22} color="#dc2626" />
+              </div>
+              <div>
+                <h3 className="admin-banner-title">Platform Administrator Mode ({currentUser.email})</h3>
+                <p className="admin-banner-sub">
+                  You are logged into the root admin persona. You have access to review user reports, approve worker verification badges, and manage categories.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="zilo-btn-admin-launch"
+              onClick={() => setCurrentView('admin')}
+            >
+              <Shield size={16} />
+              <span>Open Admin Moderation Panel</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* ==================================================
+            PRESENTATION DECK: ALL USER MAILS & ACCOUNTS
+            Kept in the dashboard for easy swing to show website to present
+            ================================================== */}
+        <section className="dash-presentation-deck">
+          <div className="deck-header">
+            <div className="deck-header-info">
+              <div className="deck-tag-row">
+                <span className="deck-badge">
+                  <Sparkles size={13} />
+                  <span>PRESENTATION DEMO DECK</span>
+                </span>
+                <span className="deck-subtitle-pill">
+                  ⚡ Easy Swing Persona Switcher
+                </span>
+              </div>
+              <h2 className="deck-title">User Accounts & Email Directory</h2>
+              <p className="deck-desc">
+                The emails and profile details of every user are kept here for live website presentations. Click <strong>"Swing to User"</strong> on any card to instantly switch accounts and demonstrate role-specific employer, worker, student, or admin features.
+              </p>
+            </div>
+
+            <div className="deck-header-actions">
+              <button
+                type="button"
+                className="deck-toggle-btn"
+                onClick={() => setIsDeckExpanded(!isDeckExpanded)}
+                title={isDeckExpanded ? 'Collapse accounts' : 'Expand accounts'}
+              >
+                <span>{isDeckExpanded ? 'Hide User Cards' : `Show All Users (${DEMO_PRESENTATION_USERS.length})`}</span>
+                {isDeckExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {isDeckExpanded && (
+            <div className="deck-body">
+              {/* Filter Pills & Search Bar */}
+              <div className="deck-controls-bar">
+                <div className="deck-filter-pills">
+                  <button
+                    type="button"
+                    className={`deck-pill ${userCategoryFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setUserCategoryFilter('all')}
+                  >
+                    All Users ({DEMO_PRESENTATION_USERS.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`deck-pill ${userCategoryFilter === 'employer' ? 'active' : ''}`}
+                    onClick={() => setUserCategoryFilter('employer')}
+                  >
+                    🏢 Employers (1)
+                  </button>
+                  <button
+                    type="button"
+                    className={`deck-pill ${userCategoryFilter === 'tradesman' ? 'active' : ''}`}
+                    onClick={() => setUserCategoryFilter('tradesman')}
+                  >
+                    🛠️ Skilled Trades (1)
+                  </button>
+                  <button
+                    type="button"
+                    className={`deck-pill ${userCategoryFilter === 'extra_hands' ? 'active' : ''}`}
+                    onClick={() => setUserCategoryFilter('extra_hands')}
+                  >
+                    🎓 Extra Hands Students (3)
+                  </button>
+                  <button
+                    type="button"
+                    className={`deck-pill ${userCategoryFilter === 'service' ? 'active' : ''}`}
+                    onClick={() => setUserCategoryFilter('service')}
+                  >
+                    💼 Service Biz (1)
+                  </button>
+                  <button
+                    type="button"
+                    className={`deck-pill ${userCategoryFilter === 'admin' ? 'active' : ''}`}
+                    onClick={() => setUserCategoryFilter('admin')}
+                  >
+                    🛡️ Admin (1)
+                  </button>
+                </div>
+
+                <div className="deck-search-wrap">
+                  <Search size={15} color="#94a3b8" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, email, or skill..."
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    className="deck-search-input"
+                  />
+                  {userSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setUserSearchTerm('')}
+                      className="deck-search-clear"
+                      title="Clear search"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Grid of Users */}
+              <div className="deck-users-grid">
+                {filteredDemoUsers.map((u) => {
+                  const isCurrent =
+                    currentUser?.id === u.id ||
+                    (currentUser?.email && currentUser.email.toLowerCase() === u.email.toLowerCase());
+
+                  return (
+                    <div
+                      key={u.id}
+                      className={`deck-user-card ${isCurrent ? 'is-active-persona' : ''}`}
+                      onClick={() => {
+                        if (!isCurrent) handleSwingUser(u);
+                      }}
+                    >
+                      {/* Top banner / active pill */}
+                      <div className="card-top-status-bar">
+                        {isCurrent ? (
+                          <span className="card-active-glow-badge">
+                            <span className="pulse-dot" />
+                            <span>CURRENTLY ACTIVE PERSONA</span>
+                          </span>
+                        ) : (
+                          <span className="card-inactive-hint">Click to swing to account</span>
+                        )}
+                        <span
+                          className="card-category-tag"
+                          style={{
+                            backgroundColor: `${u.badgeColor}15`,
+                            color: u.badgeColor,
+                            borderColor: `${u.badgeColor}30`
+                          }}
+                        >
+                          {u.category === 'employer' && '🏢 Employer'}
+                          {u.category === 'tradesman' && '🛠️ Skilled Trades'}
+                          {u.category === 'extra_hands' && '🎓 Extra Hands'}
+                          {u.category === 'service' && '💼 Service Biz'}
+                          {u.category === 'admin' && '🛡️ System Admin'}
+                        </span>
+                      </div>
+
+                      {/* User Profile Header */}
+                      <div className="card-user-info-row">
+                        {u.avatarPhoto ? (
+                          <img
+                            src={u.avatarPhoto}
+                            alt={u.name}
+                            className="card-avatar-img"
+                          />
+                        ) : (
+                          <div
+                            className="card-avatar-initial"
+                            style={{ backgroundColor: u.badgeColor }}
+                          >
+                            {u.name.charAt(0)}
+                          </div>
+                        )}
+                        <div className="card-user-titles">
+                          <h3 className="card-user-name">{u.name}</h3>
+                          <p className="card-role-title">{u.roleTitle}</p>
+                          <span className="card-edu-tag">
+                            {u.education === 'educated' ? `🎓 ${u.educationDegree}` : `🛠️ ${u.educationDegree}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* EMAIL ADDRESS BOX (The Core User Requirement) */}
+                      <div className="card-email-box">
+                        <div className="email-meta-left">
+                          <Mail size={15} color="#2563eb" />
+                          <div className="email-labels">
+                            <span className="email-caption">Email (Login & Verification)</span>
+                            <span className="email-text">{u.email}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="card-copy-btn"
+                          onClick={(e) => handleCopyText(u.email, e)}
+                          title="Copy email address"
+                        >
+                          {copiedEmail === u.email ? (
+                            <>
+                              <Check size={13} color="#16a34a" />
+                              <span style={{ color: '#16a34a' }}>Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={13} />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Phone Contact */}
+                      <div className="card-phone-row">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Phone size={13} color="#64748b" />
+                          <span className="phone-text">+91 {u.mobile}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="phone-copy-link"
+                          onClick={(e) => handleCopyText(u.mobile, e)}
+                          title="Copy mobile number"
+                        >
+                          {copiedEmail === u.mobile ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+
+                      {/* Presentation Demo Note */}
+                      <div className="card-demo-note">
+                        <strong>Demo Focus:</strong> {u.demoHighlight}
+                      </div>
+
+                      {/* Card Action Button */}
+                      <div className="card-action-footer">
+                        {isCurrent ? (
+                          <div className="btn-active-pill">
+                            <CheckCircle2 size={15} />
+                            <span>Currently Active in Dashboard</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn-swing-account"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSwingUser(u);
+                            }}
+                          >
+                            <Zap size={14} />
+                            <span>Swing to {u.name.split(' ')[0]}</span>
+                          </button>
+                        )}
+                        {u.role === 'admin' && (
+                          <button
+                            type="button"
+                            className="btn-admin-link-pill"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!isCurrent) handleSwingUser(u);
+                              setCurrentView('admin');
+                            }}
+                            title="Go to Admin Moderation Panel"
+                          >
+                            <Shield size={13} />
+                            <span>Admin Panel</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* ==================================================
             EMPLOYER DASHBOARD
@@ -311,7 +688,18 @@ export const UserDashboardView: React.FC = () => {
                   </div>
                   <div className="detail-item">
                     <span className="item-label">Email Address</span>
-                    <strong className="item-val">{currentUser?.email}</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <strong className="item-val">{currentUser?.email}</strong>
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyText(currentUser?.email || '', e)}
+                        className="profile-copy-btn"
+                        title="Copy Email"
+                      >
+                        {copiedEmail === currentUser?.email ? <Check size={13} color="#16a34a" /> : <Copy size={13} />}
+                        <span>{copiedEmail === currentUser?.email ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    </div>
                   </div>
                   <div className="detail-item">
                     <span className="item-label">Account Role</span>
@@ -541,6 +929,21 @@ export const UserDashboardView: React.FC = () => {
                   <div className="detail-item">
                     <span className="item-label">Mobile Number</span>
                     <strong className="item-val">📞 +91 {myWorkerProfile.mobile}</strong>
+                  </div>
+                  <div className="detail-item">
+                    <span className="item-label">Email Address</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <strong className="item-val">{myWorkerProfile.email || currentUser?.email}</strong>
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopyText(myWorkerProfile.email || currentUser?.email || '', e)}
+                        className="profile-copy-btn"
+                        title="Copy Email"
+                      >
+                        {copiedEmail === (myWorkerProfile.email || currentUser?.email) ? <Check size={13} color="#16a34a" /> : <Copy size={13} />}
+                        <span>{copiedEmail === (myWorkerProfile.email || currentUser?.email) ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    </div>
                   </div>
                   <div className="detail-item">
                     <span className="item-label">Base Location</span>

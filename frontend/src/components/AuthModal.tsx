@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, Briefcase, Phone, X, Lock, Mail, UserCheck, ShieldCheck } from 'lucide-react';
+import { DEMO_PRESENTATION_USERS } from '../data/seedData';
+import { Users, Briefcase, Phone, X, Lock, Mail, UserCheck, ShieldCheck, Zap } from 'lucide-react';
 import { GoogleIcon, GoogleAuthModal } from './GoogleAuthModal';
 
 interface AuthModalProps {
@@ -226,24 +227,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </button>
             </div>
 
-            {/* Quick Demo Login */}
+            {/* Quick Demo Login with all User Mails */}
             <div className="quick-demo-section">
-              <span className="demo-label">Quick Demo Access:</span>
-              <div className="demo-buttons-row">
-                <button
-                  type="button"
-                  className="demo-btn"
-                  onClick={() => setQuickDemoUser('employer')}
-                >
-                  Employer Demo (Ramesh)
-                </button>
-                <button
-                  type="button"
-                  className="demo-btn"
-                  onClick={() => setQuickDemoUser('worker')}
-                >
-                  Worker Demo (Ravi Kumar)
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span className="demo-label" style={{ fontWeight: 700, color: '#1e293b' }}>⚡ 1-Click Demo Accounts (Presentation):</span>
+                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>{DEMO_PRESENTATION_USERS.length} Profiles</span>
+              </div>
+              <div className="demo-users-pills-list">
+                {DEMO_PRESENTATION_USERS.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    className="demo-account-pill-btn"
+                    onClick={() => {
+                      setCurrentUser({
+                        id: u.id,
+                        name: u.name,
+                        mobile: u.mobile,
+                        email: u.email,
+                        role: u.role,
+                        education: u.education,
+                        educationDegree: u.educationDegree,
+                        avatar: u.avatarPhoto,
+                        createdAt: '2026-09-15T10:00:00Z'
+                      });
+                      showToast(`✨ Logged in as ${u.name} (${u.email})!`);
+                      onClose();
+                      if (u.primaryActionView === 'admin') {
+                        setCurrentView('admin');
+                      } else {
+                        setCurrentView('dashboard');
+                      }
+                    }}
+                    title={`Log in as ${u.name} (${u.email})`}
+                  >
+                    <div className="pill-left">
+                      <span className="pill-name">{u.name}</span>
+                      <span className="pill-mail">{u.email}</span>
+                    </div>
+                    <span className="pill-role" style={{ color: u.badgeColor }}>
+                      {u.category === 'employer' && '🏢 Employer'}
+                      {u.category === 'tradesman' && '🛠️ Tradesman'}
+                      {u.category === 'extra_hands' && '🎓 Student'}
+                      {u.category === 'service' && '💼 Service'}
+                      {u.category === 'admin' && '🛡️ Admin'}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           </form>

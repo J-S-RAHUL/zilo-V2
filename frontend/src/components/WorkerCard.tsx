@@ -343,16 +343,16 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({ worker, onSelect }) => {
           </div>
         </div>
 
-        {/* Expected Payment Row */}
-        <div className="zilo-price-box">
-          <span className="price-label">
-            {isExtraHands ? 'Rate in free time:' : 'Service rate:'}
-          </span>
-          <span className="price-amount">
-            ₹{worker.expectedPayment.amount}
-            <span className="price-unit">/{worker.expectedPayment.unit}</span>
-          </span>
-        </div>
+        {/* Expected Payment Row — only for Skilled Workers & Service Providers, not Extra Hands */}
+        {!isExtraHands && (
+          <div className="zilo-price-box">
+            <span className="price-label">Service rate:</span>
+            <span className="price-amount">
+              ₹{worker.expectedPayment.amount}
+              <span className="price-unit">/{worker.expectedPayment.unit}</span>
+            </span>
+          </div>
+        )}
 
         {/* Skill Tags */}
         <div className="zilo-skills-cloud">

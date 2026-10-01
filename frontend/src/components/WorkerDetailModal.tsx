@@ -106,13 +106,15 @@ export const WorkerDetailModal: React.FC = () => {
 
         {/* Action Bar with Prominent CALL NOW */}
         <div className="detail-action-bar">
-          <div className="detail-pay-highlight">
-            <span className="pay-caption">Expected Payment</span>
-            <span className="pay-val">
-              ₹{worker.expectedPayment.amount}
-              <small>/{worker.expectedPayment.unit}</small>
-            </span>
-          </div>
+          {worker.profileCategory !== 'extra_hands' && (
+            <div className="detail-pay-highlight">
+              <span className="pay-caption">Expected Payment</span>
+              <span className="pay-val">
+                ₹{worker.expectedPayment.amount}
+                <small>/{worker.expectedPayment.unit}</small>
+              </span>
+            </div>
+          )}
 
           <div className="detail-action-buttons">
             <button
